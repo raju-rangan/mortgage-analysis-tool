@@ -15,7 +15,8 @@ from mortgage_calculator import (
     calculate_debt_to_income,
     calculate_pmi,
     calculate_affordability,
-    generate_amortization_schedule
+    generate_amortization_schedule,
+    calculate_refinance_savings
 )
 from mortgage_validator import validate_loan_application
 from mortgage_api import get_current_rates, get_property_valuation
@@ -39,7 +40,8 @@ def print_menu():
     print("6. Calculate Affordability")
     print("7. Get Current Mortgage Rates")
     print("8. Get Property Valuation")
-    print("9. Exit")
+    print("9. Refinance Analysis")
+    print("0. Exit")
     print()
 
 
@@ -226,6 +228,53 @@ def fetch_property_valuation():
         print(f"\nError: {valuation['error']}")
 
 
+def analyze_refinance():
+    """Analyze potential savings from refinancing a mortgage."""
+    print("\n--- Refinance Analysis ---")
+    
+    # Get current mortgage details
+    current_principal = get_float_input("Current remaining loan balance ($): ")
+    current_rate = get_float_input("Current interest rate (%): ")
+    current_term_remaining = get_float_input("Remaining term (years): ")
+    
+    # Get new mortgage details
+    print("\nNew Mortgage Details:")
+    new_rate = get_float_input("New interest rate (%): ")
+    new_term = get_int_input("New loan term (years): ")
+    closing_costs = get_float_input("Closing costs ($): ")
+    
+    # Calculate refinance savings
+    results = calculate_refinance_savings(
+        current_principal, 
+        current_rate, 
+        current_term_remaining,
+        new_rate, 
+        new_term, 
+        closing_costs
+    )
+    
+    # Display results
+    print("\nRefinance Analysis Results:")
+    print(f"Current monthly payment: ${results['current_payment']:.2f}")
+    print(f"New monthly payment: ${results['new_payment']:.2f}")
+    print(f"Monthly payment savings: ${results['monthly_savings']:.2f}")
+    
+    if results['monthly_savings'] > 0:
+        print(f"Break-even point: {results['break_even_months']:.1f} months")
+    else:
+        print("No monthly savings. Refinancing would increase your payment.")
+    
+    print(f"Lifetime savings (after closing costs): ${results['lifetime_savings']:.2f}")
+    
+    # Provide recommendation
+    if results['lifetime_savings'] > 0:
+        print("\nRecommendation: Refinancing appears beneficial in the long term.")
+        if results['monthly_savings'] <= 0:
+            print("However, your monthly payment would increase.")
+    else:
+        print("\nRecommendation: Refinancing does not appear beneficial based on these numbers.")
+
+
 def main():
     """Main application function."""
     print_header()
@@ -233,7 +282,7 @@ def main():
     while True:
         print_menu()
         
-        choice = input("Enter your choice (1-9): ")
+        choice = input("Enter your choice (0-9): ")
         
         if choice == '1':
             calculate_payment()
@@ -252,6 +301,8 @@ def main():
         elif choice == '8':
             fetch_property_valuation()
         elif choice == '9':
+            analyze_refinance()
+        elif choice == '0':
             print("\nThank you for using the Mortgage Analysis Tool. Goodbye!")
             sys.exit(0)
         else:
