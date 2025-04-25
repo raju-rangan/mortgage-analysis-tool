@@ -264,7 +264,7 @@ def create_account():
     print("\n--- Create New Account ---")
     
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass.getpass("Password: ")
     email = input("Email: ")
     ssn = input("SSN (XXX-XX-XXXX): ")
     dob = input("Date of Birth (YYYY-MM-DD): ")
@@ -282,7 +282,7 @@ def login_account():
     print("\n--- Login ---")
     
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass.getpass("Password: ")
     
     security = MortgageSecurity()
     if security.authenticate_user(username, password):
@@ -338,7 +338,7 @@ def update_profile(username, password):
         print("\nAuthentication failed.")
         return
     
-    new_password = input("New Password (leave blank to keep current): ")
+    new_password = getpass.getpass("New Password (leave blank to keep current): ")
     
     if new_password:
         if security.reset_password(username, new_password):
@@ -373,7 +373,7 @@ def submit_application():
     print("\n--- Submit New Application ---")
     
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass.getpass("Password: ")
     
     security = MortgageSecurity()
     if not security.authenticate_user(username, password):
@@ -411,7 +411,7 @@ def check_status():
     
     application_id = input("Application ID: ")
     username = input("Username: ")
-    password = input("Password: ")
+    password = getpass.getpass("Password: ")
     
     result = check_application_status(application_id, username, password)
     
@@ -429,7 +429,7 @@ def access_admin_functions():
     """Access admin functions."""
     print("\n--- Admin Functions ---")
     
-    password = input("Admin Password: ")
+    password = getpass.getpass("Admin Password: ")
     
     print("\nPlease select an option:")
     print("1. View All Users")
@@ -479,7 +479,7 @@ def view_all_applications(password):
     """View all applications (admin function)."""
     print("\n--- All Applications ---")
     
-    result = admin_dashboard(password, "execute_query", {"query": "SELECT * FROM applications"})
+    result = admin_dashboard(password, "execute_query", {"query": "SELECT * FROM applications", "params": {}})
     
     if "error" in result:
         print(f"\nError: {result['error']}")
@@ -510,8 +510,17 @@ def execute_query(password):
     print("\n--- Execute Custom Query ---")
     
     query = input("Enter SQL Query: ")
+    params = input("Enter query parameters as JSON (optional, leave blank for none): ")
     
-    result = admin_dashboard(password, "execute_query", {"query": query})
+    query_params = {}
+    if params:
+        try:
+            query_params = json.loads(params)
+        except json.JSONDecodeError:
+            print("\nError: Invalid JSON format for parameters")
+            return
+    
+    result = admin_dashboard(password, "execute_query", {"query": query, "params": query_params})
     
     if "error" in result:
         print(f"\nError: {result['error']}")
