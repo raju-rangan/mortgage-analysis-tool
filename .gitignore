@@ -124,3 +124,7 @@ data/
 *.db
 config.ini
 secrets.json
+
+# Application specific
+data/user_data.json
+data/applications.json
