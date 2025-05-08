@@ -207,6 +207,70 @@ def calculate_affordability(monthly_income, monthly_debts, down_payment, annual_
     return max_price
 
 
+def calculate_equity_buildup(principal, annual_interest_rate, term_years, years, property_value, down_payment=0):
+    """
+    Calculate the equity built up after a specific number of years.
+    
+    Args:
+        principal (float): Loan principal amount
+        annual_interest_rate (float): Annual interest rate (percentage)
+        term_years (int): Loan term in years
+        years (int): Number of years to calculate equity for
+        property_value (float): Initial property value
+        down_payment (float, optional): Down payment amount
+        
+    Returns:
+        float: Equity amount after the specified number of years
+    """
+    if years <= 0:
+        return down_payment
+    
+    if years > term_years:
+        return property_value  # Loan is paid off, equity is full property value
+    
+    # Generate amortization schedule up to the specified year
+    schedule = generate_amortization_schedule(principal, annual_interest_rate, term_years)
+    payments_per_year = 12
+    payment_index = min(years * payments_per_year, len(schedule)) - 1
+    
+    # Calculate principal paid so far
+    principal_paid = principal - schedule[payment_index]['remaining_balance']
+    
+    # Equity is down payment plus principal paid
+    return down_payment + principal_paid
+
+
+def calculate_break_even_point(points_cost, monthly_savings):
+    """
+    Calculate the break-even point in months when paying points to reduce interest rate.
+    
+    Args:
+        points_cost (float): Cost of the points paid
+        monthly_savings (float): Monthly savings from the reduced interest rate
+        
+    Returns:
+        float or None: Break-even point in months, or None if no monthly savings
+    """
+    if monthly_savings <= 0:
+        return None
+    
+    return points_cost / monthly_savings
+
+
+def calculate_points_cost(loan_amount, points):
+    """
+    Calculate the cost of mortgage points.
+    
+    Args:
+        loan_amount (float): Loan principal amount
+        points (float): Number of points (percentage of loan amount)
+        
+    Returns:
+        float: Cost of the points
+    """
+    return (points / 100) * loan_amount
+
+
 # Feature to be added during demo: Refinance Analysis
 def calculate_refinance_savings(current_principal, current_rate, current_term_remaining, 
                                new_rate, new_term, closing_costs):

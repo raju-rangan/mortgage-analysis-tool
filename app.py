@@ -5,6 +5,7 @@ This module provides a simple command-line interface for the mortgage analysis t
 """
 
 import sys
+import os
 import json
 from datetime import datetime
 
@@ -15,10 +16,21 @@ from mortgage_calculator import (
     calculate_debt_to_income,
     calculate_pmi,
     calculate_affordability,
-    generate_amortization_schedule
+    generate_amortization_schedule,
+    calculate_equity_buildup,
+    calculate_break_even_point,
+    calculate_points_cost
 )
 from mortgage_validator import validate_loan_application
 from mortgage_api import get_current_rates, get_property_valuation
+from mortgage_scenario import MortgageScenario
+from mortgage_comparison import (
+    compare_scenarios,
+    generate_comparison_table,
+    generate_payment_chart,
+    export_to_csv,
+    export_to_pdf
+)
 
 
 def print_header():
@@ -39,7 +51,8 @@ def print_menu():
     print("6. Calculate Affordability")
     print("7. Get Current Mortgage Rates")
     print("8. Get Property Valuation")
-    print("9. Exit")
+    print("9. Mortgage Comparison Tool")
+    print("10. Exit")
     print()
 
 
@@ -233,7 +246,7 @@ def main():
     while True:
         print_menu()
         
-        choice = input("Enter your choice (1-9): ")
+        choice = input("Enter your choice (1-10): ")
         
         if choice == '1':
             calculate_payment()
@@ -252,6 +265,9 @@ def main():
         elif choice == '8':
             fetch_property_valuation()
         elif choice == '9':
+            from mortgage_comparison_functions import mortgage_comparison_tool
+            mortgage_comparison_tool()
+        elif choice == '10':
             print("\nThank you for using the Mortgage Analysis Tool. Goodbye!")
             sys.exit(0)
         else:
