@@ -12,16 +12,21 @@ A simple Python application for analyzing mortgage data and performing common mo
 - Calculate maximum affordable home price
 - Fetch current mortgage rates
 - Get property valuations
+- **Mortgage Comparison Tool** - Compare multiple mortgage scenarios side-by-side
 
 ## Project Structure
 
 ```
 mortgage_analysis_tool/
-├── app.py                  # Command-line interface
-├── mortgage_calculator.py  # Core calculation functions
-├── mortgage_validator.py   # Input validation
-├── mortgage_api.py         # Mock API for mortgage data
-└── test_mortgage.py        # Unit tests
+├── app.py                          # Command-line interface
+├── mortgage_calculator.py          # Core calculation functions
+├── mortgage_validator.py           # Input validation
+├── mortgage_api.py                 # Mock API for mortgage data
+├── mortgage_scenario.py            # Mortgage scenario representation
+├── mortgage_comparison.py          # Mortgage comparison functionality
+├── mortgage_comparison_functions.py # CLI functions for comparison tool
+└── test_mortgage.py                # Unit tests
+└── test_mortgage_comparison.py     # Unit tests for comparison functionality
 ```
 
 ## Installation
@@ -60,6 +65,22 @@ payment = calculate_monthly_payment(
 )
 print(f"Monthly payment: ${payment:.2f}")
 ```
+
+### Using the Mortgage Comparison Tool
+
+The Mortgage Comparison Tool allows you to:
+
+1. Create and save multiple mortgage scenarios with different parameters
+2. Compare key metrics across scenarios:
+   - Monthly payment
+   - Total interest paid
+   - Total cost of the loan
+   - Equity buildup after 5, 10, and 15 years
+   - Break-even point if paying points to reduce interest rate
+3. Visualize payment breakdown over time
+4. Export comparison results to CSV or PDF format
+
+To use the tool, select option 9 from the main menu.
 
 ## Demo Purpose
 
