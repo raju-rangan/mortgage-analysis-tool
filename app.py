@@ -6,6 +6,7 @@ This module provides a simple command-line interface for the mortgage analysis t
 
 import sys
 import json
+import os
 from datetime import datetime
 
 from mortgage_calculator import (
@@ -19,6 +20,7 @@ from mortgage_calculator import (
 )
 from mortgage_validator import validate_loan_application
 from mortgage_api import get_current_rates, get_property_valuation
+from mortgage_comparison import MortgageScenario, MortgageComparison
 
 
 def print_header():
@@ -39,7 +41,8 @@ def print_menu():
     print("6. Calculate Affordability")
     print("7. Get Current Mortgage Rates")
     print("8. Get Property Valuation")
-    print("9. Exit")
+    print("9. Compare Mortgage Scenarios")
+    print("0. Exit")
     print()
 
 
@@ -226,14 +229,336 @@ def fetch_property_valuation():
         print(f"\nError: {valuation['error']}")
 
 
+def compare_mortgages(mortgage_comparison):
+    """Compare multiple mortgage scenarios."""
+    print("\n--- Mortgage Comparison Tool ---")
+    
+    while True:
+        print("\nMortgage Comparison Menu:")
+        print("1. Create New Scenario")
+        print("2. View All Scenarios")
+        print("3. Remove Scenario")
+        print("4. Compare Scenarios")
+        print("5. Generate Payment Breakdown Chart")
+        print("6. Export Comparison to CSV")
+        print("7. Save Scenarios")
+        print("8. Load Scenarios")
+        print("9. Return to Main Menu")
+        
+        choice = input("\nEnter your choice (1-9): ")
+        
+        if choice == '1':
+            create_scenario(mortgage_comparison)
+        elif choice == '2':
+            view_scenarios(mortgage_comparison)
+        elif choice == '3':
+            remove_scenario(mortgage_comparison)
+        elif choice == '4':
+            display_comparison(mortgage_comparison)
+        elif choice == '5':
+            generate_chart(mortgage_comparison)
+        elif choice == '6':
+            export_comparison(mortgage_comparison)
+        elif choice == '7':
+            save_scenarios(mortgage_comparison)
+        elif choice == '8':
+            load_scenarios(mortgage_comparison)
+        elif choice == '9':
+            return
+        else:
+            print("\nInvalid choice. Please try again.")
+        
+        input("\nPress Enter to continue...")
+
+
+def create_scenario(mortgage_comparison):
+    """Create a new mortgage scenario."""
+    print("\n--- Create New Mortgage Scenario ---")
+    
+    name = input("Scenario name: ")
+    
+    # Check if scenario with this name already exists
+    if mortgage_comparison.get_scenario(name):
+        print(f"\nA scenario with the name '{name}' already exists.")
+        overwrite = input("Do you want to overwrite it? (y/n): ").lower()
+        if overwrite != 'y':
+            return
+    
+    loan_amount = get_float_input("Loan amount ($): ")
+    interest_rate = get_float_input("Annual interest rate (%): ")
+    term_years = get_int_input("Loan term (years): ")
+    down_payment = get_float_input("Down payment ($): ")
+    points = get_float_input("Points paid (%): ")
+    
+    property_value_input = input("Property value ($, leave blank to use loan + down payment): ")
+    property_value = float(property_value_input) if property_value_input else None
+    
+    annual_appreciation = get_float_input("Annual property appreciation rate (%, default 2.0): ", min_value=-10)
+    
+    # Create scenario
+    scenario = MortgageScenario(
+        name=name,
+        loan_amount=loan_amount,
+        interest_rate=interest_rate,
+        term_years=term_years,
+        down_payment=down_payment,
+        points=points,
+        property_value=property_value,
+        annual_appreciation=annual_appreciation
+    )
+    
+    # Add to comparison
+    mortgage_comparison.add_scenario(scenario)
+    
+    print(f"\nScenario '{name}' created successfully.")
+    print(f"Monthly payment: ${scenario.monthly_payment:.2f}")
+    print(f"Total interest: ${scenario.total_interest:.2f}")
+    print(f"Total cost: ${scenario.total_cost:.2f}")
+
+
+def view_scenarios(mortgage_comparison):
+    """View all mortgage scenarios."""
+    print("\n--- All Mortgage Scenarios ---")
+    
+    scenarios = mortgage_comparison.get_all_scenarios()
+    
+    if not scenarios:
+        print("No scenarios have been created yet.")
+        return
+    
+    print(f"\nTotal scenarios: {len(scenarios)}")
+    print(f"{'Name':<20}{'Loan Amount':<15}{'Interest Rate':<15}{'Term':<10}{'Monthly Payment':<20}")
+    print("-" * 80)
+    
+    for name, scenario in scenarios.items():
+        print(f"{name:<20}${scenario.loan_amount:<14,.2f}{scenario.interest_rate:<15.2f}{scenario.term_years:<10}${scenario.monthly_payment:<19,.2f}")
+
+
+def remove_scenario(mortgage_comparison):
+    """Remove a mortgage scenario."""
+    print("\n--- Remove Mortgage Scenario ---")
+    
+    scenarios = mortgage_comparison.get_all_scenarios()
+    
+    if not scenarios:
+        print("No scenarios have been created yet.")
+        return
+    
+    print("\nAvailable scenarios:")
+    for i, name in enumerate(scenarios.keys(), 1):
+        print(f"{i}. {name}")
+    
+    choice = input("\nEnter the number of the scenario to remove (or 'c' to cancel): ")
+    
+    if choice.lower() == 'c':
+        return
+    
+    try:
+        index = int(choice) - 1
+        if 0 <= index < len(scenarios):
+            scenario_name = list(scenarios.keys())[index]
+            confirm = input(f"Are you sure you want to remove '{scenario_name}'? (y/n): ").lower()
+            
+            if confirm == 'y':
+                mortgage_comparison.remove_scenario(scenario_name)
+                print(f"\nScenario '{scenario_name}' removed successfully.")
+            else:
+                print("\nRemoval cancelled.")
+        else:
+            print("\nInvalid selection.")
+    except ValueError:
+        print("\nInvalid input. Please enter a number.")
+
+
+def display_comparison(mortgage_comparison):
+    """Display comparison of mortgage scenarios."""
+    print("\n--- Mortgage Comparison Results ---")
+    
+    scenarios = mortgage_comparison.get_all_scenarios()
+    
+    if not scenarios:
+        print("No scenarios have been created yet.")
+        return
+    
+    if len(scenarios) < 2:
+        print("You need at least 2 scenarios to compare. Please create another scenario.")
+        return
+    
+    comparison = mortgage_comparison.generate_comparison_table()
+    
+    # Display comparison table
+    print("\nComparison Table:")
+    print(f"{'Metric':<20}", end="")
+    
+    for name in comparison['scenarios']:
+        print(f"{name:<15}", end="")
+    print()
+    
+    print("-" * (20 + 15 * len(comparison['scenarios'])))
+    
+    print(f"{'Monthly Payment':<20}", end="")
+    for payment in comparison['monthly_payment']:
+        print(f"${payment:<14,.2f}", end="")
+    print()
+    
+    print(f"{'Total Interest':<20}", end="")
+    for interest in comparison['total_interest']:
+        print(f"${interest:<14,.2f}", end="")
+    print()
+    
+    print(f"{'Total Cost':<20}", end="")
+    for cost in comparison['total_cost']:
+        print(f"${cost:<14,.2f}", end="")
+    print()
+    
+    print(f"{'Equity (5 years)':<20}", end="")
+    for equity in comparison['equity_5yr']:
+        print(f"${equity:<14,.2f}", end="")
+    print()
+    
+    print(f"{'Equity (10 years)':<20}", end="")
+    for equity in comparison['equity_10yr']:
+        print(f"${equity:<14,.2f}", end="")
+    print()
+    
+    print(f"{'Equity (15 years)':<20}", end="")
+    for equity in comparison['equity_15yr']:
+        print(f"${equity:<14,.2f}", end="")
+    print()
+
+
+def generate_chart(mortgage_comparison):
+    """Generate and display payment breakdown chart."""
+    print("\n--- Generate Payment Breakdown Chart ---")
+    
+    scenarios = mortgage_comparison.get_all_scenarios()
+    
+    if not scenarios:
+        print("No scenarios have been created yet.")
+        return
+    
+    if len(scenarios) < 1:
+        print("You need at least 1 scenario to generate a chart.")
+        return
+    
+    print("\nGenerating payment breakdown chart...")
+    
+    # Create scenarios directory if it doesn't exist
+    chart_dir = os.path.join(os.path.dirname(__file__), "charts")
+    if not os.path.exists(chart_dir):
+        os.makedirs(chart_dir)
+    
+    # Generate chart
+    chart_path = os.path.join(chart_dir, f"payment_breakdown_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+    mortgage_comparison.generate_payment_breakdown_chart(chart_path)
+    
+    print(f"\nChart generated and saved to: {chart_path}")
+    print("Note: In a GUI application, this chart would be displayed directly.")
+
+
+def export_comparison(mortgage_comparison):
+    """Export comparison results to CSV."""
+    print("\n--- Export Comparison Results ---")
+    
+    scenarios = mortgage_comparison.get_all_scenarios()
+    
+    if not scenarios:
+        print("No scenarios have been created yet.")
+        return
+    
+    if len(scenarios) < 2:
+        print("You need at least 2 scenarios to compare and export.")
+        return
+    
+    print("\nExporting comparison results...")
+    
+    # Export to CSV
+    csv_path = mortgage_comparison.export_to_csv()
+    
+    print(f"\nComparison exported to CSV: {csv_path}")
+    print("Note: PDF export would require additional libraries in a real implementation.")
+
+
+def save_scenarios(mortgage_comparison):
+    """Save mortgage scenarios to a file."""
+    print("\n--- Save Mortgage Scenarios ---")
+    
+    scenarios = mortgage_comparison.get_all_scenarios()
+    
+    if not scenarios:
+        print("No scenarios have been created yet.")
+        return
+    
+    filename = input("Enter filename (leave blank for auto-generated name): ")
+    
+    if not filename:
+        filename = None
+    
+    file_path = mortgage_comparison.save_scenarios(filename)
+    
+    print(f"\nScenarios saved to: {file_path}")
+
+
+def load_scenarios(mortgage_comparison):
+    """Load mortgage scenarios from a file."""
+    print("\n--- Load Mortgage Scenarios ---")
+    
+    # Get list of saved scenario files
+    scenarios_dir = os.path.join(os.path.dirname(__file__), "scenarios")
+    
+    if not os.path.exists(scenarios_dir):
+        print("No saved scenarios found.")
+        return
+    
+    scenario_files = [f for f in os.listdir(scenarios_dir) if f.endswith('.json')]
+    
+    if not scenario_files:
+        print("No saved scenarios found.")
+        return
+    
+    print("\nAvailable scenario files:")
+    for i, filename in enumerate(scenario_files, 1):
+        print(f"{i}. {filename}")
+    
+    choice = input("\nEnter the number of the file to load (or 'c' to cancel): ")
+    
+    if choice.lower() == 'c':
+        return
+    
+    try:
+        index = int(choice) - 1
+        if 0 <= index < len(scenario_files):
+            filename = scenario_files[index]
+            
+            # Confirm if there are existing scenarios
+            if mortgage_comparison.get_all_scenarios():
+                confirm = input("This will replace all current scenarios. Continue? (y/n): ").lower()
+                if confirm != 'y':
+                    return
+            
+            success = mortgage_comparison.load_scenarios(filename)
+            
+            if success:
+                print(f"\nScenarios loaded successfully from: {filename}")
+            else:
+                print(f"\nError loading scenarios from: {filename}")
+        else:
+            print("\nInvalid selection.")
+    except ValueError:
+        print("\nInvalid input. Please enter a number.")
+
+
 def main():
     """Main application function."""
     print_header()
     
+    # Initialize mortgage comparison
+    mortgage_comparison = MortgageComparison()
+    
     while True:
         print_menu()
         
-        choice = input("Enter your choice (1-9): ")
+        choice = input("Enter your choice (0-9): ")
         
         if choice == '1':
             calculate_payment()
@@ -252,6 +577,8 @@ def main():
         elif choice == '8':
             fetch_property_valuation()
         elif choice == '9':
+            compare_mortgages(mortgage_comparison)
+        elif choice == '0':
             print("\nThank you for using the Mortgage Analysis Tool. Goodbye!")
             sys.exit(0)
         else:
